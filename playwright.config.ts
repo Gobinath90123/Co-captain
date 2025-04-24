@@ -19,11 +19,11 @@ function getBaseUrl() {
   const environment = process.env.ENV;
   switch (environment) {
     case 'qa':
-      return 'https://tripvista.appxpay.in/';
+      return 'http://dev.restro.cocaptain.co.in/#/restaurant/login';
     case 'dev':
-      return 'https://tripvista.appxpay.in/';
+      return 'http://dev.restro.cocaptain.co.in/#/restaurant/login';
     case 'stage':
-      return 'https://tripvista.appxpay.in/';
+      return 'http://dev.restro.cocaptain.co.in/#/restaurant/login';
     case 'local':
       return 'http://localhost';
     default:
