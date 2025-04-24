@@ -6,13 +6,10 @@
   "scripts": {
     "pretest": "tsc --noEmit",
     "update:playwright": "playwright install --with-deps",
-    "test:record": "npx playwright codegen --viewport-size=1680,1050 https://tripvista.appxpay.in/",
+    "test:record": "npx playwright codegen --viewport-size=384,824 http://dev.guestuser.cocaptain.co.in/#/qr-login/1amud9t235/G1",
     "test": "cross-env ENV=qa npx playwright test  --grep @E2E",
-    "test:oneway": "cross-env ENV=qa npx playwright test  --grep @oneway",
-    "test:roundtrip": "cross-env ENV=qa npx playwright test  --grep @roundtrip",
-    "test:multicity": "cross-env ENV=qa npx playwright test  --grep @multicity",
     "test:chrome": "npx playwright test --project=Chrome",
-    "test1": "npx playwright test",
+    "test:new": "npx playwright test",
     "test:debug": "npx playwright test --headed --debug",
     "html-report": "npx playwright test --reporter=html && npx playwright show-report"
   },
@@ -25,6 +22,7 @@
   "license": "ISC",
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.52.0",
     "@types/node": "^22.10.1",
     "axios": "^1.7.9",
     "cross-env": "^7.0.3",
@@ -33,7 +31,15 @@
     "typescript": "^5.7.2",
     "winston": "^3.17.0"
   },
-  "dependencies": {
-    "@playwright/test": "^1.51.1"
-  }
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gobinath90123/Co-captain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Gobinath90123/Co-captain/issues"
+  },
+  "homepage": "https://github.com/Gobinath90123/Co-captain#readme"
 }
