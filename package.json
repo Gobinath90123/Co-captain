@@ -6,7 +6,7 @@
   "scripts": {
     "pretest": "tsc --noEmit",
     "update:playwright": "playwright install --with-deps",
-    "test:record": "npx playwright codegen --viewport-size=1680,1050 https://tripvista.appxpay.in/",
+    "test:record": "npx playwright codegen --viewport-size=1680,1050 http://uatemployee.cocaptain.co.in/#/login/x713fo2tx5",
     "test": "cross-env ENV=qa npx playwright test  --grep @E2E",
     "test:chrome": "npx playwright test --project=Chrome",
     "test:new": "npx playwright test",
