@@ -17,7 +17,7 @@ test.use({ ...devices['iPhone 11'] });
 
 
 // Test Suite
-test.describe('@gopi', () => {
+test.describe('@E2E', () => {
   test('User submits request and admin approves it', async () => {
     // 1. Launch the browser and create contexts
     const browser = await chromium.launch();
