@@ -1,14 +1,19 @@
-import { test, expect, chromium, Page, devices  } from '@playwright/test';
+import { test, chromium, devices } from '@playwright/test';
+import { AdminHelper } from '../utils/adminHelper';
 
 // Configuration (can be moved to a separate file for better maintenance)
 const ADMIN_CREDENTIALS = { username: 'rajesh', password: 'Test@123' };
-const USER_URL = 'http://uatguestuser.cocaptain.co.in/#/qr-login/x713fo2tx5/';
-const ADMIN_URL = 'http://uatemployee.cocaptain.co.in/#/login/x713fo2tx5';
+const KOT_CREDENTIALS = { username: 'kotcsf', password: 'Kotcsf1' };
+const Resturant_ID = 'x713fo2tx5';
+const Restaurant_Name ='Madurai Veedu';
+const USER_URL = `http://uatguestuser.cocaptain.co.in/#/qr-login/${Resturant_ID}/`;
+const ADMIN_URL = `http://uatemployee.cocaptain.co.in/#/login/${Resturant_ID}`;
 const APPROVE_LIST_URL = 'http://uatemployee.cocaptain.co.in/#/home/tabs/approve-list';
+const KOT_URL = `http://uatemployee.cocaptain.co.in/#/login/${Resturant_ID}`;
+const Order_LIST_URL = 'http://uatemployee.cocaptain.co.in/#/home/tabs/order-list-kot';
 
-test.use({
-    ...devices['iPhone 11'], // You can replace 'iPhone 11' with other device types if needed
-  });
+
+test.use({ ...devices['iPhone 11'] });
 
 
 // Test Suite
@@ -18,97 +23,38 @@ test.describe('@gopi', () => {
     const browser = await chromium.launch();
     const adminContext = await browser.newContext();
     const userContext = await browser.newContext();
+    const kotContext = await browser.newContext();
 
     // 2. Admin logs in and approves the request
     const adminPage = await adminContext.newPage();
-    await adminLogin(adminPage);
-    await adminPage.bringToFront();
+    await AdminHelper.adminLogin(adminPage, ADMIN_URL, APPROVE_LIST_URL, ADMIN_CREDENTIALS);
 
-    // Fetch admin subscription value
-    const subscriptionValue = await getAdminSubscription(adminPage);
+    // 3. Fetch admin subscription value
+    const subscriptionValue = await AdminHelper.getAdminSubscription(adminPage);
 
-    // 3. User submits request
+    // 4. User submits request
     const userPage = await userContext.newPage();
-    await userSubmitRequest(userPage, subscriptionValue);
+    const mobileNumber = await AdminHelper.userSubmitRequest(userPage, USER_URL, subscriptionValue);
 
-    // 4. Admin checks for the request and approves it
-    await adminPage.bringToFront();
-    await adminPage.reload();
-    await checkAndApproveRequest(adminPage, subscriptionValue);
+    // 5. User checks for the request
+    await AdminHelper.checkElementsVisibility(userPage, Restaurant_Name, Resturant_ID, mobileNumber, subscriptionValue);
+
+    // 6. Admin checks for the request and approves it
+    await AdminHelper.checkAndApproveRequest(adminPage, APPROVE_LIST_URL, subscriptionValue);
+
+    // 7. User places an order
+    await AdminHelper.searchAndPlaceOrder(userPage, 'Chicken Biriyani', 1);
+
+    const kotPage = await kotContext.newPage();
+    await AdminHelper.kotLogin(kotPage, KOT_URL, Order_LIST_URL, KOT_CREDENTIALS);
+
+    // 8. Approve order status
+    await AdminHelper.prepareAndDispatchOrder(kotPage, 'Chicken Biriyani');
     
-    await userPage.bringToFront();
-    await userPage.reload();
-    await userPage.waitForTimeout(3000);
+    // 9. Verify order status by user
+    await AdminHelper.checkOrderStatus(userPage, 'Chicken Biriyani', 'Dispatched');
+
+    // 10. Close the browser
     await browser.close();
   });
 });
-
-// Admin Login Function
-async function adminLogin(page: Page) {
-  await page.goto(ADMIN_URL);
-  await page.getByRole('textbox', { name: 'User ID' }).fill(ADMIN_CREDENTIALS.username);
-  await page.getByRole('textbox', { name: 'Password' }).fill(ADMIN_CREDENTIALS.password);
-  await page.getByRole('button', { name: 'Login' }).click();
-  await expect(page).toHaveURL(APPROVE_LIST_URL);
-}
-
-// Get Admin Subscription Value
-async function getAdminSubscription(page: Page): Promise<string> {
-    const subscription = await page.locator("//h5[text()=' ADMIN Subscriptions ']/following-sibling::p").textContent();
-    const trimmedSubscription = subscription?.trim() || '';
-    console.log('Admin Subscriptions Value:', trimmedSubscription);
-
-
-    await page.getByRole('tab', { name: 'Approved' }).click();
-
-    const isApproved = await page.getByLabel('Approved').getByText(trimmedSubscription).isVisible();
-    if (isApproved) {
-        // Perform actions only if 'TMV1' is visible
-        await page.getByRole('tabpanel', { name: 'Approved' }).getByRole('img').click();
-        await expect(page.getByText('Table ID TMV1 deleted')).toBeVisible();
-      }
-  return trimmedSubscription;
-}
-
-// User Request Submission
-async function userSubmitRequest(page: Page, subscriptionValue: string) {
-  const randomMobile = generateMobileNumber();
-  const randomName = generateName();
-  await page.goto(`${USER_URL}${subscriptionValue}`);
-  
-  await page.locator('#ion-input-0').fill(randomMobile);
-  await page.locator('#ion-input-1').fill(randomName);
-  console.log(`Filling in user details: ${randomMobile}, ${randomName}`);
-  
-  await page.getByRole('button', { name: 'STEP-IN -Taste Awaits' }).click();
-  await page.waitForSelector(`text=${randomMobile}`, { timeout: 10000 });  // Wait for mobile number to appear
-}
-
-// Admin checks and approves request0
-async function checkAndApproveRequest(page: Page, mobileNumber: string) {
-  await expect(page).toHaveURL(APPROVE_LIST_URL);
-  const firstImage = page.getByRole('tabpanel', { name: 'Menu Request' }).getByRole('img').first();
-  await expect(firstImage).toBeVisible();
-  await firstImage.click();
-  await page.waitForTimeout(5000);  // Adjust this based on the actual wait condition you need
-}
-
-// Utility Functions
-function generateMobileNumber(): string {
-  const start = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
-  let number = start;
-  for (let i = 0; i < 9; i++) {
-    number += Math.floor(Math.random() * 10).toString();
-  }
-  return number;
-}
-
-function generateName(): string {
-  const names = ['dinesh', 'manoj', 'kumar', 'arun', 'sathish', 'ravi', 'kishore'];
-  return names[Math.floor(Math.random() * names.length)];
-}
-
-
-
-
-

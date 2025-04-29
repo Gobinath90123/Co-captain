@@ -48,7 +48,7 @@ export const projects = [
     use: {
       browserName: `chromium`,
       channel: `chrome`,
-      headless: process.env.CI ? true : false,
+      headless: false,
       screenshot: `on`,
       video: `on`,
       trace: `retain-on-failure`,
