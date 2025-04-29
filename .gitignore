@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+
+# Test result directories
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Miscellaneous files
+.DS_Store
+
+# Allure-related directories and files
+/allure-report/
+/allure-reports/
+/allure-results/
+
+# Other result files
+results.xml
+
+/har/
+/logs/
+
+/report/
+.qodo

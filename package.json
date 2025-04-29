@@ -1,0 +1,37 @@
+{
+  "name": "playwright-co-captain",
+  "version": "0.0.1",
+  "description": "Engaging Agents to  hotel Solutions",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "tsc --noEmit",
+    "update:playwright": "playwright install --with-deps",
+    "test:record": "npx playwright codegen --viewport-size=375,812 http://uatemployee.cocaptain.co.in/#/login/x713fo2tx5",
+    "test": "cross-env ENV=qa npx playwright test  --grep @E2E",
+    "test:chrome": "npx playwright test --project=Chrome",
+    "test:new": "npx playwright test",
+    "test:debug": "npx playwright test --headed --debug",
+    "html-report": "npx playwright test --reporter=html && npx playwright show-report"
+  },
+  "keywords": [
+    "Playwright",
+    "TypeScript",
+    "monocart-reporter"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.10.1",
+    "axios": "^1.7.9",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "monocart-reporter": "^2.9.12",
+    "typescript": "^5.7.2",
+    "winston": "^3.17.0"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.51.1"
+  }
+}
