@@ -1,27 +1,34 @@
 import { chromium, devices, Browser, BrowserContext } from '@playwright/test';
 
 const iPhone11 = devices['iPhone 11'];
-const DESKTOP_VIEWPORT = { width: 1920, height: 1080 };
+const VIEWPORT = { width: 440, height: 1080 };
+const SPACING = 480;
 
-export async function launchBrowser(): Promise<Browser> {
+export async function launchBrowserAt(x: number): Promise<Browser> {
     return await chromium.launch({
       headless: false,
-      args: ['--window-size=1920,1080'],
+      args: [`--window-size=${VIEWPORT.width},${VIEWPORT.height}`,
+      `--window-position=${x},0`,],
     });
   }
 
-  export async function createAdminContext(browser: Browser): Promise<BrowserContext> {
-    return await browser.newContext({ viewport: DESKTOP_VIEWPORT });
-  }
-  
-  export async function createKotContext(browser: Browser): Promise<BrowserContext> {
-    return await browser.newContext({ viewport: DESKTOP_VIEWPORT });
+  export async function createAdminContext(): Promise<BrowserContext> {
+    const browser = await launchBrowserAt(SPACING * 0);
+    return await browser.newContext({ viewport: VIEWPORT });
   }
 
-  export async function createServerContext(browser: Browser): Promise<BrowserContext> {
-    return await browser.newContext({ viewport: DESKTOP_VIEWPORT });
+  export async function createUserContext(): Promise<BrowserContext> {
+    const browser = await launchBrowserAt(SPACING * 1);
+    return await browser.newContext({ viewport: VIEWPORT });
+    //return await browser.newContext({ ...iPhone11 });
   }
   
-  export async function createUserContext(browser: Browser): Promise<BrowserContext> {
-    return await browser.newContext({ ...iPhone11 });
+  export async function createKotContext(): Promise<BrowserContext> {
+    const browser = await launchBrowserAt(SPACING * 2);
+    return await browser.newContext({ viewport: VIEWPORT });
+  }
+
+  export async function createServerContext(): Promise<BrowserContext> {
+    const browser = await launchBrowserAt(SPACING * 3); 
+    return await browser.newContext({ viewport: VIEWPORT });
   }

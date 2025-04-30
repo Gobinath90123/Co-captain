@@ -1,20 +1,19 @@
 import { test } from '@playwright/test';
 import { AdminHelper } from '../utils/adminHelper';
 import { testData } from '../fixture/testData';
-import { launchBrowser, createAdminContext, createKotContext, createUserContext } from '../utils/browserHelper';
+import { launchBrowserAt, createAdminContext, createKotContext, createUserContext } from '../utils/browserHelper';
 
 // Test Suite
 test.describe('@E2E', () => {
   test('User submits request and admin approves it', async () => {
     test.setTimeout(120_000);
     // 1. Launch browser in headed mode with window size
-    const browser = await launchBrowser();
 
     // 2. Create browser contexts for each role
-    const adminContext = await createAdminContext(browser);
-    const kotContext = await createKotContext(browser);
-    const serverContext = await createKotContext(browser);
-    const userContext = await createUserContext(browser);
+    const adminContext = await createAdminContext();
+    const kotContext = await createKotContext();
+    const serverContext = await createKotContext();
+    const userContext = await createUserContext();
 
 
     // 3. Admin logs in
@@ -65,7 +64,6 @@ test.describe('@E2E', () => {
     await AdminHelper.closeBill(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
 
 
-    // 15. Close the browser
-    await browser.close();
+
   });
 });
