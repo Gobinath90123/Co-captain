@@ -59,7 +59,13 @@ test.describe('@E2E', () => {
     // 13. Final user check: order delivered
     await AdminHelper.checkOrderStatus(userPage, 'Chicken Biriyani', 'Delivered');
 
-    // 14. Close the browser
+    //14. user switch to order list page
+    await AdminHelper.switchToOrderListPage(userPage);
+    await AdminHelper.RequestedForBill(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
+    await AdminHelper.closeBill(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
+
+
+    // 15. Close the browser
     await browser.close();
   });
 });

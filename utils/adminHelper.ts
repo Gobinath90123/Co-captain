@@ -161,12 +161,60 @@ export class AdminHelper {
 
   static async moveOrderStatus(page: Page, dish: string, status: 'Return to kot' | 'Done'){
     await page.bringToFront();
-    await page.reload();
     await page.waitForTimeout(3000);
     const btn = page.locator(`//div[contains(text(), '${dish}')]/ancestor::div[@class='row table table-row']//button[text()='${status}']`);
-    log(await btn.isVisible() ? `Order status moved to ${status}.` : `Order not in expected status: ${status}.`);
-    await page.waitForTimeout(2000);
+    if (await btn.isVisible()) {
+      await btn.click();
+      log(`Order status moved to ${status}.`);
+    } else {
+      log(`Order not in expected status: ${status}.`);
     }
+
+    await page.waitForTimeout(2000);
+  }
+
+
+  static async switchToOrderListPage(page: Page) {
+    await page.bringToFront();
+    await page.waitForTimeout(2000);
+    log("Navigating to Orders tab...");
+    await page.locator("//ion-tab-button[normalize-space(.//ion-label)='Orders']").click();
+    await page.waitForURL('http://uatguestuser.cocaptain.co.in/#/home/tabs/order-list'),
+    await page.waitForTimeout(2000);
+    const askForBillBtn = page.locator("//button[normalize-space(text())='Ask For Bill']");
+    await expect(askForBillBtn).toBeVisible();
+    await askForBillBtn.click();
+    log("Clicked 'Ask For Bill' button.");
+    await page.waitForTimeout(2000);
+    await expect(page.locator("//div[contains(@class, 'banner-text')]")).toBeVisible();
+    log("Banner text visible after requesting bill.");    
+  }
+
+  static async RequestedForBill(page: Page, APPROVE_LIST_URL: string, subscription: string) {
+    await test.step('Request for bill Status', async () => {
+    await page.bringToFront();
+    await expect(page).toHaveURL(APPROVE_LIST_URL);
+    await page.getByRole('tab', { name: 'Request for bill' }).click();
+    await page.waitForTimeout(2000);
+    log('Clicked on "Request for bill" tab.');
+    await expect(page.locator(`//div[text()=' ${subscription} ']`)).toBeVisible();
+    log(`Verified request for bill status for subscription: ${subscription}`);
+  });
+  }
+
+  static async closeBill(page: Page, APPROVE_LIST_URL: string, subscription: string) {
+    await test.step('Close bill Status', async () => {
+    await page.bringToFront();
+    // Wait and click the CloseBill label
+    await page.locator("//ion-label[normalize-space()='CloseBill']").click();
+    // Wait for the correct URL after clicking the CloseBill label
+    await expect(page).toHaveURL("http://uatemployee.cocaptain.co.in/#/home/tabs/order-list");
+    await page.waitForTimeout(2000);
+
+    // Find and click the Close button for the corresponding order
+    await page.locator("(//strong[text()='TMV1']/ancestor::div//button[contains(@class, 'close')])[2]").click();
+  });
+  }
 
   private static generateMobileNumber(): string {
     const start = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
