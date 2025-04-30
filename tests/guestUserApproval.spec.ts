@@ -6,6 +6,7 @@ import { launchBrowser, createAdminContext, createKotContext, createUserContext 
 // Test Suite
 test.describe('@E2E', () => {
   test('User submits request and admin approves it', async () => {
+    test.setTimeout(120_000);
     // 1. Launch browser in headed mode with window size
     const browser = await launchBrowser();
 
@@ -18,7 +19,8 @@ test.describe('@E2E', () => {
 
     // 3. Admin logs in
     const adminPage = await adminContext.newPage();
-    await AdminHelper.adminLogin(adminPage, testData.ADMIN_URL, testData.APPROVE_LIST_URL, testData.ADMIN_CREDENTIALS);
+    await AdminHelper.login(adminPage, testData.ADMIN_URL, testData.APPROVE_LIST_URL, testData.ADMIN_CREDENTIALS, 'Admin');
+
 
     // 4. Fetch subscription value from admin panel
     const subscriptionValue = await AdminHelper.getAdminSubscription(adminPage);
@@ -32,31 +34,32 @@ test.describe('@E2E', () => {
 
     // 7. Admin approves the submitted request
     await AdminHelper.checkAndApproveRequest(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
+    await AdminHelper.checkUserApproved(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
 
     // 8. User places an order
     await AdminHelper.searchAndPlaceOrder(userPage, 'Chicken Biriyani', 1);
+    await AdminHelper.checkOrderStatus(userPage, 'Chicken Biriyani', 'Placed');
 
     // 9. KOT logs in to manage orders
     const kotPage = await kotContext.newPage();
-    await AdminHelper.kotLogin(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS);
+    await AdminHelper.login(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS, 'KOT');
 
     // 10. KOT prepares and dispatches the order
-    await AdminHelper.prepareAndDispatchOrder(kotPage, 'Chicken Biriyani');
+    await AdminHelper.prepareAndDispatchOrder(kotPage, 'Chicken Biriyani', 'Started');
+    await AdminHelper.prepareAndDispatchOrder(kotPage, 'Chicken Biriyani', 'Dispatched');
     
     // 11. User verifies that the order status is updated
     await AdminHelper.checkOrderStatus(userPage, 'Chicken Biriyani', 'Dispatched');
 
-    // 12. Server logs in to manage orders
+    // 12. Server logs in and completes order
     const serverPage = await serverContext.newPage();
-    await AdminHelper.kotLogin(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS);
-
-    // 13. Server dispatches the order to user
+    await AdminHelper.login(serverPage, testData.SERVER_URL, testData.SERVER_LIST_URL, testData.SERVER_CREDENTIALS, 'Server');
     await AdminHelper.moveOrderStatus(serverPage, 'Chicken Biriyani', 'Done');
 
-    // 11. User verifies that the order status is updated
+    // 13. Final user check: order delivered
     await AdminHelper.checkOrderStatus(userPage, 'Chicken Biriyani', 'Delivered');
 
-    // 12. Close the browser
+    // 14. Close the browser
     await browser.close();
   });
 });

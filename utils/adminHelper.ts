@@ -5,78 +5,71 @@ function log(message: string) {
 }
 
 export class AdminHelper {
-  static async adminLogin(page: Page, ADMIN_URL: string, APPROVE_LIST_URL: string, credentials: { username: string; password: string }) {
-    await test.step('Admin Login', async () => {
-    log(`Navigating to admin login URL: ${ADMIN_URL}`);
-    await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded' });
 
-    log(`Filling UserID: ${credentials.username}, Password: ${credentials.password}`);
-    await page.getByRole('textbox', { name: 'User ID' }).fill(credentials.username);
-    await page.getByRole('textbox', { name: 'Password' }).fill(credentials.password);
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(APPROVE_LIST_URL, { timeout: 10000 });
-
-    log('Admin login successful.');
+  static async login(page: Page, loginUrl: string, successUrl: string, credentials: { username: string; password: string }, role: string) {
+    await test.step(`${role} Login`, async () => {
+      log(`Navigating to ${role} login URL: ${loginUrl}`);
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+  
+      log(`Filling ${role} credentials - Username: ${credentials.username}`);
+      await page.getByRole('textbox', { name: 'User ID' }).fill(credentials.username);
+      await page.getByRole('textbox', { name: 'Password' }).fill(credentials.password);
+      await page.waitForTimeout(2000);
+      await page.getByRole('button', { name: 'Login' }).click();
+      await expect(page).toHaveURL(successUrl, { timeout: 5000 });
+      log(`${role} login successful.`);
     });
   }
-
+  
   static async getAdminSubscription(page: Page): Promise<string> {
     return await test.step('Get Admin Subscription', async () => {
-    const subscription = await page.locator("//h5[text()=' ADMIN Subscriptions ']/following-sibling::p").textContent();
-    const trimmed = subscription?.trim() || '';
-    log(`Fetched admin subscription value: ${trimmed}`);
-
-    const subscriptions = trimmed.split(',').map(s => s.trim());
-    const firstSubscription = subscriptions[0]; // or subscriptions.at(-1) for last
-    log(`Using first subscription value: ${firstSubscription}`);
+    const rawText = await page.locator("//h5[text()=' ADMIN Subscriptions ']/following-sibling::p").textContent();
+    const firstSubscription = (rawText?.trim().split(',')[0] || '').trim();
+    log(`Using subscription: ${firstSubscription}`);
 
     // Handle deletion if visible
-    const deleteImageLocator = `(//div[contains(text(),'${firstSubscription}')]/ancestor::div[@class='row mx-1 mt-4 approve approve-bottm']//img[contains(@src,'delete.jpg')])[1]`;
-    const deleteImage = page.locator(deleteImageLocator);
+    const deleteIcon = `(//div[contains(text(),'${firstSubscription}')]/ancestor::div[contains(@class,'approve')]//img[contains(@src,'delete.jpg')])[1]`;
+    const deleteImage = page.locator(deleteIcon);
     const isDeleteImageVisible = await deleteImage.isVisible();
     if (isDeleteImageVisible) {
       await deleteImage.click();
       log('Delete image clicked');
-    } else {
-      log('Delete image is not visible');
     }
-  
+    await page.waitForTimeout(2000);
     // Check for approval
     await page.getByRole('tab', { name: 'Approved' }).click();
     log('Clicked on "Approved" tab.');
-    const approvedLocator = await page.locator(`(//div[text()=' ${firstSubscription} ']/following-sibling::div)[2]`);
-    if (await approvedLocator.isVisible()) {
-      await approvedLocator.click();
+    const approvedEntry = page.locator(`(//div[text()=' ${firstSubscription} ']/following-sibling::div)[2]`);
+    if (await approvedEntry.isVisible()) {
+      await approvedEntry.click();
       await expect(page.getByText(`Table ID ${firstSubscription} deleted`)).toBeVisible();
-      log(`Subscription "${firstSubscription}" was approved and removed.`);
+      log(`Subscription ${firstSubscription} deleted.`);
     }
-
+    await page.waitForTimeout(2000);
     return firstSubscription;
     });
   }
 
   static async userSubmitRequest(page: Page, USER_URL: string, subscriptionValue: string) {
     return await test.step('User Submits Request', async () => {
-    const randomMobile = this.generateMobileNumber();
-    const randomName = this.generateName();
+    const mobile = this.generateMobileNumber();
+    const name = this.generateName();
     const fullUrl = `${USER_URL}${subscriptionValue}`;
 
     log(`Navigating to user QR login URL: ${fullUrl}`);
     await page.goto(fullUrl);
-    log(`Filling mobile: ${randomMobile}, name: ${randomName}`);
-
-    await page.locator('#ion-input-0').fill(randomMobile);
-    await page.locator('#ion-input-1').fill(randomName);
+    await page.locator('#ion-input-0').fill(mobile);
+    await page.locator('#ion-input-1').fill(name);
     await page.getByRole('button', { name: 'STEP-IN -Taste Awaits' }).click();
-    await page.waitForSelector(`text=${randomMobile}`, { timeout: 10000 });
-    log('User request submitted and confirmed via mobile number visibility.');
-    return randomMobile;
+    await page.waitForSelector(`text=${mobile}`, { timeout: 10000 });
+    log(`Request submitted with mobile: ${mobile}, name: ${name}`);
+    return mobile;
     });
 
   }
 
   static async checkElementsVisibility(page: Page, Restaurant_Name: string, Resturant_ID: string, mobileNumber: string, subscriptionValue: string) {
-    const elementsToCheck = [
+    const elements = [
       'Waiting for Approval',
       `Restaurant Name:${Restaurant_Name}`,
       `Restaurant ID:${Resturant_ID}`,
@@ -84,96 +77,95 @@ export class AdminHelper {
       `Table No:${subscriptionValue}`,
     ];
 
-    for (const text of elementsToCheck) {
-      const element = page.getByText(text);
-      await expect(element).toBeVisible();
-      console.log(`Verified visibility of element with text: ${text}`);
+    for (const text of elements) {
+      await expect(page.getByText(text)).toBeVisible();
+      log(`Verified visibility: ${text}`);
     }
   }
 
-  static async checkAndApproveRequest(page: Page, APPROVE_LIST_URL: string, subscriptionValue: string) {
-    await test.step('Check and Approve User Request', async () => {
+  static async checkAndApproveRequest(page: Page, APPROVE_LIST_URL: string, subscription: string) {
+    await test.step('Verifying on Menu Request List page. Clicking on Add Icon to Approve Request', async () => {
     await page.bringToFront();
     await page.reload();
     await expect(page).toHaveURL(APPROVE_LIST_URL);
-    log('Verifying on Approve List page.');
-    const addImageLocator = `(//div[contains(text(),'${subscriptionValue}')]/ancestor::div[@class='row mx-1 mt-4 approve approve-bottm']//img[contains(@src,'add.jpg')])[1]`;
-    const addImage = page.locator(addImageLocator);
-    await expect(addImage).toBeVisible();
-    await addImage.click();
-    log(`Clicked on the first request with subscription value: ${subscriptionValue}`);    
+    const addIcon = page.locator(`(//div[contains(text(),'${subscription}')]/ancestor::div[contains(@class,'approve')]//img[contains(@src,'add.jpg')])[1]`);
+    await expect(addIcon).toBeVisible();
+    await addIcon.click();
     await page.waitForTimeout(5000);
+    log(`Approved request for subscription: ${subscription}`);
   });
   }
 
-  static async searchAndPlaceOrder(page: Page, dishName: string, userCount: number) {
+  static async checkUserApproved(page: Page, APPROVE_LIST_URL: string, subscription: string) {
+    await test.step('Check Approval Status', async () => {
+    await page.bringToFront();
+    await page.reload();
+    await expect(page).toHaveURL(APPROVE_LIST_URL);
+    await page.getByRole('tab', { name: 'Approved' }).click();
+    await page.waitForTimeout(2000);
+    log('Clicked on "Approved" tab.');
+    await expect(page.locator(`//div[text()=' ${subscription} ']`)).toBeVisible();
+    log(`Verified approved user for subscription: ${subscription}`);
+  });
+  }
+
+  static async searchAndPlaceOrder(page: Page, dish: string, count: number) {
     await page.bringToFront();
     await page.reload();
     await page.waitForTimeout(3000);
-    await page.getByRole('textbox', { name: 'Search for dishes' }).fill(dishName);
+    await page.getByRole('textbox', { name: 'Search for dishes' }).fill(dish);
+    await expect(page.getByRole('heading', { name: dish }).locator('span')).toBeVisible();
+    log(`Dish "${dish}" found in search.`);
 
-    const heading = page.getByRole('heading', { name: dishName }).locator('span');
-    await expect(heading).toBeVisible();
-    log(`Dish "${dishName}" found in search.`);
-
-    for (let i = 0; i < userCount; i++) {
+    for (let i = 0; i < count; i++) {
       await page.locator('.col-2').click();
       await page.getByRole('button', { name: 'Yes' }).click();
       await page.waitForTimeout(2000);
       await expect(page.getByRole('button', { name: 'Placed' })).toBeVisible();
-      
-      const placedBtn = page.locator(`//h5[.//span[normalize-space(text())='${dishName}']]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(normalize-space(), 'Placed')]`);
-      log(await placedBtn.isVisible() ? 'Order placed.' : 'Order not placed.');
     }
+    log(`Order placed for ${dish}, count: ${count}`);
+
   }
 
-  static async kotLogin(page: Page, KOT_URL: string, Order_LIST_URL: string, credentials: { username: string; password: string }) {
-    await test.step('KOT Login', async () => {
-    log(`Navigating to KOT login URL: ${KOT_URL}`);
-    await page.bringToFront();
-    await page.waitForTimeout(3000);
-    await page.goto(KOT_URL);
-    log(`Filling UserID: ${credentials.username}, Password: ${credentials.password}`);
-    await page.getByRole('textbox', { name: 'User ID' }).fill(credentials.username);
-    await page.getByRole('textbox', { name: 'Password' }).fill(credentials.password);
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(Order_LIST_URL);
-    log('KOT login successful.');
-    });
-  }
-
-
-  static async prepareAndDispatchOrder(page: Page, dishName: string) {
-    await test.step(`Prepare and Dispatch order for: ${dishName}`, async () => {
-      log(`Clicking on 'List' to view current orders`);
+  static async openOrderListView(page: Page) {
+    await test.step("Open order list view", async () => {
+      log("Clicking on 'List' to view current orders");
       await page.locator("//button[normalize-space(text())='List']").click();
-  
-      const getDishActionButton = (action: 'Started' | 'Dispatched') =>
-        page.locator(`//div[text()[contains(., '${dishName}')]]/ancestor::div[contains(@class, 'table-row')]//button[text()='${action}']`);
-  
-      await getDishActionButton('Started').click();
-      await page.waitForTimeout(5000);
-      await getDishActionButton('Dispatched').click();
-  
-      log(`Order marked as Started and Dispatched: ${dishName}`);
     });
   }
 
-  static async checkOrderStatus(page: Page, dishName: string, status: 'Started' | 'Dispatched' | 'Delivered') {
+  static async prepareAndDispatchOrder(page: Page, dish: string, finalAction: 'Started' | 'Dispatched') {
+    await test.step(`Update order status for dish: ${dish} up to ${finalAction}`, async () => {
+      await AdminHelper.openOrderListView(page);
+      
+      const getBtn = (status: string) =>
+        page.locator(`//div[text()[contains(., '${dish}')]]/ancestor::div[contains(@class, 'table-row')]//button[text()='${status}']`);
+      if (finalAction === 'Started') {
+        await getBtn('Started').click();
+      } else if (finalAction === 'Dispatched') {
+        await getBtn('Dispatched').click();
+      }
+      log(`Dish '${dish}' moved to ${finalAction}`);
+      await page.waitForTimeout(2000);
+    });
+  }
+
+  static async checkOrderStatus(page: Page, dish: string, status: 'Placed' |'Started' | 'Dispatched' | 'Delivered') {
     await page.bringToFront();
     await page.reload();
     await page.waitForTimeout(2000);
-    const statusBtn = page.locator(`//h5[contains(., '${dishName}']]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(., '${status}')]`);
+    const statusBtn = page.locator(`//span[normalize-space()='${dish}']/ancestor::div[contains(@class, 'card-body')]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(., '${status}')]`);
     log(await statusBtn.isVisible() ? `Order in ${status} status.` : `Order not in ${status} status.`);
+    await page.waitForTimeout(2000);
   }
 
-  static async moveOrderStatus(page: Page, dishName: string, status: 'Return to kot' | 'Done'){
+  static async moveOrderStatus(page: Page, dish: string, status: 'Return to kot' | 'Done'){
     await page.bringToFront();
     await page.reload();
     await page.waitForTimeout(3000);
-    const btn = page.locator(`//div[contains(text(), '${dishName}')]/ancestor::div[@class='row table table-row']//button[text()='${status}']`);
-    log(await btn.isVisible() ? `Order in Delivered status.` : `Order not in Delivered status.`);
-
+    const btn = page.locator(`//div[contains(text(), '${dish}')]/ancestor::div[@class='row table table-row']//button[text()='${status}']`);
+    log(await btn.isVisible() ? `Order status moved to ${status}.` : `Order not in expected status: ${status}.`);
+    await page.waitForTimeout(2000);
     }
 
   private static generateMobileNumber(): string {
@@ -184,7 +176,7 @@ export class AdminHelper {
   private static generateName(): string {
     const base = ['dinesh', 'manoj', 'kumar', 'arun', 'sathish', 'ravi', 'kishore'];
     const name = base[Math.floor(Math.random() * base.length)];
-    const suffix = Date.now().toString().slice(-4); // last 4 digits of timestamp
+    const suffix = Date.now().toString().slice(-4);
     return `${name}${suffix}`;
   }
   
