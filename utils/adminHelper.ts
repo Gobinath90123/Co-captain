@@ -25,7 +25,7 @@ export class AdminHelper {
     log(`Fetched admin subscription value: ${trimmedText}`);
 
     const subscriptions = trimmedText.split(',').map(s => s.trim());
-    const firstSubscription = subscriptions[0]; // or subscriptions.at(-1) for last
+    const firstSubscription = subscriptions[1]; // or subscriptions.at(-1) for last
     log(`Using first subscription value: ${firstSubscription}`);
 
     // Handle deletion if visible
@@ -186,7 +186,7 @@ export class AdminHelper {
       console.log('Order is not in Dispatched status');
       }
     }
-
+ 
   private static generateMobileNumber(): string {
     const start = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
     let number = start;
@@ -199,5 +199,59 @@ export class AdminHelper {
   private static generateName(): string {
     const names = ['dinesh', 'manoj', 'kumar', 'arun', 'sathish', 'ravi', 'kishore'];
     return names[Math.floor(Math.random() * names.length)];
+  }
+
+
+  static async serverLogin(page: Page, SERVER_URL: string,SERVER_list_URL: string, credentials: { username: string; password: string }) {
+    await test.step('Admin Login', async () => {
+    log(`Navigating to admin login URL: ${SERVER_URL}`);
+    await page.bringToFront();
+    await page.waitForTimeout(3000);
+    await page.goto(SERVER_URL);
+    log(`Filling UserID: ${credentials.username}, Password: ${credentials.password}`);
+    await page.getByRole('textbox', { name: 'User ID' }).fill(credentials.username);
+    await page.getByRole('textbox', { name: 'Password' }).fill(credentials.password);
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page).toHaveURL(SERVER_list_URL);
+    log('Server login successful.');
+    });
+  }
+  static async serverCheckOrderStatus(page: Page, SERVER_list_URL: string) {
+    await page.bringToFront();
+    await page.goto(SERVER_list_URL);
+    await page.reload(); 
+    await page.waitForTimeout(200000);
+
+    if (await this.isReturnKOTButtonVisible(page)) {
+      await this.handleReturnToKOT(page);
+    } else if (await this.isDoneButtonVisible(page)) {
+      await this.handleDoneButton(page);
+    } else {
+      console.warn('Neither "Return to kot" nor "Done" button was found.');
+    }
+  }
+
+  private static async isReturnKOTButtonVisible(page: Page): Promise<boolean> {
+    const returnKOTBtn = page.locator("//button[normalize-space()='Return to kot']");
+    return await returnKOTBtn.isVisible();
+  }
+
+  private static async isDoneButtonVisible(page: Page): Promise<boolean> {
+    const doneBtn = page.locator("//button[normalize-space()='Done']");
+    return await doneBtn.isVisible();
+  }
+
+  private static async handleReturnToKOT(page: Page) {
+    const returnKOTBtn = page.locator("//button[normalize-space()='Return to kot']");
+    console.log('Return to KOT button is visible. Clicking...');
+    await returnKOTBtn.click();
+    await expect(page.getByText('Returned to KOT')).toBeVisible(); // Adjust text as needed
+  }
+
+  private static async handleDoneButton(page: Page) {
+    const doneBtn = page.locator("//button[normalize-space()='Done']");
+    console.log('Done button is visible. Clicking...');
+    await doneBtn.click();
+    await expect(page.getByText('Order marked as done')).toBeVisible(); // Adjust text as needed
   }
 }
