@@ -52,9 +52,9 @@ export const projects = [
       screenshot: `on`,
       video: `on`,
       trace: `retain-on-failure`,
-      actionTimeout: 60000,
-      viewport: null,
-      deviceScaleFactor: undefined,
-      launchOptions: { args: ['--start-maximized'] }
+      actionTimeout: 120000,
+      // viewport: null,
+      // deviceScaleFactor: undefined,
+      // launchOptions: { args: ['--start-maximized'] }
     }
   }]

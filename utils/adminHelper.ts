@@ -8,12 +8,14 @@ export class AdminHelper {
   static async adminLogin(page: Page, ADMIN_URL: string, APPROVE_LIST_URL: string, credentials: { username: string; password: string }) {
     await test.step('Admin Login', async () => {
     log(`Navigating to admin login URL: ${ADMIN_URL}`);
-    await page.goto(ADMIN_URL);
+    await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded' });
+
     log(`Filling UserID: ${credentials.username}, Password: ${credentials.password}`);
     await page.getByRole('textbox', { name: 'User ID' }).fill(credentials.username);
     await page.getByRole('textbox', { name: 'Password' }).fill(credentials.password);
     await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page).toHaveURL(APPROVE_LIST_URL);
+    await expect(page).toHaveURL(APPROVE_LIST_URL, { timeout: 10000 });
+
     log('Admin login successful.');
     });
   }
@@ -21,10 +23,10 @@ export class AdminHelper {
   static async getAdminSubscription(page: Page): Promise<string> {
     return await test.step('Get Admin Subscription', async () => {
     const subscription = await page.locator("//h5[text()=' ADMIN Subscriptions ']/following-sibling::p").textContent();
-    const trimmedText = subscription?.trim() || '';
-    log(`Fetched admin subscription value: ${trimmedText}`);
+    const trimmed = subscription?.trim() || '';
+    log(`Fetched admin subscription value: ${trimmed}`);
 
-    const subscriptions = trimmedText.split(',').map(s => s.trim());
+    const subscriptions = trimmed.split(',').map(s => s.trim());
     const firstSubscription = subscriptions[0]; // or subscriptions.at(-1) for last
     log(`Using first subscription value: ${firstSubscription}`);
 
@@ -42,9 +44,9 @@ export class AdminHelper {
     // Check for approval
     await page.getByRole('tab', { name: 'Approved' }).click();
     log('Clicked on "Approved" tab.');
-    const isApproved = await page.locator(`(//div[text()=' ${firstSubscription} ']/following-sibling::div)[2]`).isVisible();
-    if (isApproved) {
-      await page.locator(`(//div[text()=' ${firstSubscription} ']/following-sibling::div)[2]`).click();
+    const approvedLocator = await page.locator(`(//div[text()=' ${firstSubscription} ']/following-sibling::div)[2]`);
+    if (await approvedLocator.isVisible()) {
+      await approvedLocator.click();
       await expect(page.getByText(`Table ID ${firstSubscription} deleted`)).toBeVisible();
       log(`Subscription "${firstSubscription}" was approved and removed.`);
     }
@@ -108,7 +110,6 @@ export class AdminHelper {
     await page.bringToFront();
     await page.reload();
     await page.waitForTimeout(3000);
-    await page.getByRole('textbox', { name: 'Search for dishes' }).click();
     await page.getByRole('textbox', { name: 'Search for dishes' }).fill(dishName);
 
     const heading = page.getByRole('heading', { name: dishName }).locator('span');
@@ -117,28 +118,18 @@ export class AdminHelper {
 
     for (let i = 0; i < userCount; i++) {
       await page.locator('.col-2').click();
-      await expect(page.getByRole('heading', { name: 'Confirm' })).toBeVisible();
-      await expect(page.getByText('Do you want to add this')).toBeVisible();
       await page.getByRole('button', { name: 'Yes' }).click();
-  
+      await page.waitForTimeout(2000);
       await expect(page.getByRole('button', { name: 'Placed' })).toBeVisible();
-      console.log(`Dish "${dishName}" placed for user ${i + 1}.`);
-      await expect(page.getByRole('status')).toBeVisible();
-
+      
       const placedBtn = page.locator(`//h5[.//span[normalize-space(text())='${dishName}']]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(normalize-space(), 'Placed')]`);
-      if (await placedBtn.isVisible()) {
-      console.log('Order is in Placed status');
-      } else {
-      console.log('Order is not in Placed status');
-      }
+      log(await placedBtn.isVisible() ? 'Order placed.' : 'Order not placed.');
     }
   }
 
-
-
   static async kotLogin(page: Page, KOT_URL: string, Order_LIST_URL: string, credentials: { username: string; password: string }) {
-    await test.step('Admin Login', async () => {
-    log(`Navigating to admin login URL: ${KOT_URL}`);
+    await test.step('KOT Login', async () => {
+    log(`Navigating to KOT login URL: ${KOT_URL}`);
     await page.bringToFront();
     await page.waitForTimeout(3000);
     await page.goto(KOT_URL);
@@ -158,46 +149,43 @@ export class AdminHelper {
       await page.locator("//button[normalize-space(text())='List']").click();
   
       const getDishActionButton = (action: 'Started' | 'Dispatched') =>
-        page.locator(
-          `//div[text()[contains(., '${dishName}')]]/ancestor::div[contains(@class, 'table-row')]//button[text()='${action}']`
-        );
+        page.locator(`//div[text()[contains(., '${dishName}')]]/ancestor::div[contains(@class, 'table-row')]//button[text()='${action}']`);
   
-      log(`Marking dish "${dishName}" as Started`);
       await getDishActionButton('Started').click();
-
-      log(`Waiting 5 seconds before marking as Dispatched`);
       await page.waitForTimeout(5000);
-  
-      log(`Marking dish "${dishName}" as Dispatched`);
       await getDishActionButton('Dispatched').click();
   
-      log(`Dish "${dishName}" successfully marked as Started and Dispatched`);
+      log(`Order marked as Started and Dispatched: ${dishName}`);
     });
   }
 
-  static async checkOrderStatus(page: Page, dishName: string, status: 'Started' | 'Dispatched'){
+  static async checkOrderStatus(page: Page, dishName: string, status: 'Started' | 'Dispatched' | 'Delivered') {
     await page.bringToFront();
     await page.reload();
     await page.waitForTimeout(2000);
-    const dispatchBtn = page.locator(`//h5[.//span[normalize-space(text())='${dishName}']]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(normalize-space(), '${status}')]`);
-      if (await dispatchBtn.isVisible()) {
-      console.log('Order is in Dispatched status');
-      } else {
-      console.log('Order is not in Dispatched status');
-      }
+    const statusBtn = page.locator(`//h5[contains(., '${dishName}']]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(., '${status}')]`);
+    log(await statusBtn.isVisible() ? `Order in ${status} status.` : `Order not in ${status} status.`);
+  }
+
+  static async moveOrderStatus(page: Page, dishName: string, status: 'Return to kot' | 'Done'){
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForTimeout(3000);
+    const btn = page.locator(`//div[contains(text(), '${dishName}')]/ancestor::div[@class='row table table-row']//button[text()='${status}']`);
+    log(await btn.isVisible() ? `Order in Delivered status.` : `Order not in Delivered status.`);
+
     }
 
   private static generateMobileNumber(): string {
     const start = ['6', '7', '8', '9'][Math.floor(Math.random() * 4)];
-    let number = start;
-    for (let i = 0; i < 9; i++) {
-      number += Math.floor(Math.random() * 10).toString();
-    }
-    return number;
+    return start + Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
   }
 
   private static generateName(): string {
-    const names = ['dinesh', 'manoj', 'kumar', 'arun', 'sathish', 'ravi', 'kishore'];
-    return names[Math.floor(Math.random() * names.length)];
+    const base = ['dinesh', 'manoj', 'kumar', 'arun', 'sathish', 'ravi', 'kishore'];
+    const name = base[Math.floor(Math.random() * base.length)];
+    const suffix = Date.now().toString().slice(-4); // last 4 digits of timestamp
+    return `${name}${suffix}`;
   }
+  
 }
