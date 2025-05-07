@@ -1,6 +1,8 @@
 export const testData = {
     ADMIN_CREDENTIALS: { username: 'rajesh', password: 'Test@123' },
     KOT_CREDENTIALS: { username: 'kotcsf', password: 'Kotcsf1' },
+    KOT_CREDENTIALS1: { username: 'kotsouth1', password: 'Kotsouth1' },
+    KOT_CREDENTIALS2: { username: 'paramu', password: 'Paramu1' },
     SERVER_CREDENTIALS: { username: 'mani1', password: 'Mani1' },
     RESTAURANT_ID: 'x713fo2tx5',
     RESTAURANT_NAME: 'Madurai Veedu',
