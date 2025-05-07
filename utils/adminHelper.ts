@@ -146,7 +146,7 @@ export class AdminHelper {
         await getBtn('Dispatched').click();
       }
       log(`Dish '${dish}' moved to ${finalAction}`);
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(5000);
     });
   }
 
