@@ -126,7 +126,32 @@ export class AdminHelper {
     log(`Order placed for ${dish}, count: ${count}`);
 
   }
-
+  static async searchAndPlaceForMultipleOrder(page: Page, dish: string, count: number) {
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForTimeout(3000);
+  
+    await page.getByRole('textbox', { name: 'Search for dishes' }).fill(dish);
+    await expect(page.getByRole('heading', { name: dish }).locator('span')).toBeVisible();
+    log(`Dish "${dish}" found in search.`);
+  
+    // First Add Button + Confirmation
+    await page.locator("(//div[@class='col-5']/following-sibling::div)[2]").click();
+    await page.locator("//span[normalize-space()='Yes']").click();
+    await page.waitForTimeout(2000);
+  
+    // Repeat for remaining count - 1 times
+    for (let i = 1; i < count; i++) {
+      await page.locator("//div[@class='row mb-2 animated-row']//span[3]").click();
+      await page.locator("//span[normalize-space()='Yes']").click();
+      await page.waitForTimeout(2000);
+    }
+  
+    // Confirm final state (optional)
+    await expect(page.getByRole('button', { name: 'Placed' })).toBeVisible();
+    log(`Order placed for "${dish}" ${count} time(s).`);
+  }
+  
   static async openOrderListView(page: Page) {
     await test.step("Open order list view", async () => {
       log("Clicking on 'List' to view current orders");
@@ -149,7 +174,25 @@ export class AdminHelper {
       await page.waitForTimeout(5000);
     });
   }
-
+  static async prepareAndDispatchForMultipleOrder(page: Page, dish: string, finalAction: string) {
+    await test.step(`Update order status for dish: ${dish} up to ${finalAction}`, async () => {
+      await AdminHelper.openOrderListView(page);
+  
+      // Click on "Consolidate" button
+      await page.locator("//button[normalize-space(text())='Consolidate']").click();
+      await page.waitForTimeout(2000);
+        await page.locator("xpath=.//button[contains(@class,'btn btn-primary')]").click();
+        await page.waitForTimeout(2000);
+        await page.locator("xpath=.//button[contains(@class,'btn btn-success')]").click();
+        await page.waitForTimeout(1500); // slight delay between actions
+      
+  
+        log(`Dish '${dish}' moved to ${finalAction}`);
+      await page.waitForTimeout(3000);
+    });
+  }
+  
+  
   static async checkOrderStatus(page: Page, dish: string, status: 'Placed' |'Started' | 'Dispatched' | 'Delivered') {
     await page.bringToFront();
     await page.reload();
@@ -173,6 +216,32 @@ export class AdminHelper {
     await page.waitForTimeout(2000);
   }
 
+  static async moveMultipleOrderStatus(page: Page) {
+    await page.bringToFront();
+    await page.waitForTimeout(3000);
+  
+    // Continuously click the first visible button until none remain
+    while (true) {
+      const buttons = page.locator("xpath=//button[@class='no-margin styled-button']");
+      const count = await buttons.count();
+  
+      if (count === 0) break;
+  
+      const button = buttons.first();
+  
+      // Check visibility before clicking
+      if (await button.isVisible()) {
+        await button.click();
+        await page.waitForTimeout(300); // short delay to allow DOM update
+      } else {
+        break; // stop if the remaining button isn't interactable
+      }
+    }
+  
+    await page.waitForTimeout(2000);
+    await page.reload();
+    await page.waitForTimeout(2000);
+  }
 
   static async switchToOrderListPage(page: Page) {
     await page.bringToFront();

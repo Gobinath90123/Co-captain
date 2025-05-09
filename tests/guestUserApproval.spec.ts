@@ -37,7 +37,7 @@ test.describe('@E2E', () => {
     await AdminHelper.checkUserApproved(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
 
     // 8. User places an order
-    await AdminHelper.searchAndPlaceOrder(userPage, menu, 1);
+    await AdminHelper.searchAndPlaceForMultipleOrder(userPage, menu, 3);
     await AdminHelper.checkOrderStatus(userPage, menu, 'Placed');
 
     // 9. KOT logs in to manage orders
@@ -45,20 +45,20 @@ test.describe('@E2E', () => {
     await AdminHelper.login(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS, 'KOT');
 
     // 10. KOT prepares and dispatches the order
-    await AdminHelper.prepareAndDispatchOrder(kotPage, menu, 'Started');
+    await AdminHelper.prepareAndDispatchForMultipleOrder(kotPage, menu, 'Starter 3');
     // await AdminHelper.prepareAndDispatchOrder(kotPage, menu, 'Dispatched');
 
     // 9. KOT logs in to manage orders
-    const kotPage1 = await kotContext.newPage();
-    await AdminHelper.login(kotPage1, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS1, 'KOT');
+    // const kotPage1 = await kotContext.newPage();
+    // await AdminHelper.login(kotPage1, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS1, 'KOT');
 
-    // 9. KOT logs in to manage orders
-    const kotPage2 = await kotContext.newPage();
-    await AdminHelper.login(kotPage2, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS2, 'KOT');
+    // // 9. KOT logs in to manage orders
+    // const kotPage2 = await kotContext.newPage();
+    // await AdminHelper.login(kotPage2, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS2, 'KOT');
 
 
-    await AdminHelper.login(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS, 'KOT');
-    await AdminHelper.prepareAndDispatchOrder(kotPage, menu, 'Dispatched');
+    // await AdminHelper.login(kotPage, testData.KOT_URL, testData.ORDER_LIST_URL, testData.KOT_CREDENTIALS, 'KOT');
+    // await AdminHelper.prepareAndDispatchOrder(kotPage, menu, 'Dispatched');
 
     // 11. User verifies that the order status is updated
     await AdminHelper.checkOrderStatus(userPage, menu, 'Dispatched');
@@ -66,7 +66,7 @@ test.describe('@E2E', () => {
     // 12. Server logs in and completes order
     const serverPage = await serverContext.newPage();
     await AdminHelper.login(serverPage, testData.SERVER_URL, testData.SERVER_LIST_URL, testData.SERVER_CREDENTIALS, 'Server');
-    await AdminHelper.moveOrderStatus(serverPage, menu, 'Done');
+    await AdminHelper.moveMultipleOrderStatus(serverPage);
 
     // 13. Final user check: order delivered
     await AdminHelper.checkOrderStatus(userPage, menu, 'Delivered');
