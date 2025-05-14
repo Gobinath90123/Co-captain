@@ -126,6 +126,82 @@ export class AdminHelper {
     log(`Order placed for ${dish}, count: ${count}`);
 
   }
+
+
+
+static async  searchAndPlaceOrderForDifferentDishes(page: Page, dishNames: string[]) {
+  for (const dish of dishNames) {
+    // Clear search and enter new dish name
+    const searchInput = page.locator('input[placeholder="Search for dishes"]'); // Adjust selector if needed
+    await searchInput.fill(dish);
+    await page.keyboard.press('Enter');
+
+    // Wait for results to load
+    await page.waitForTimeout(1000); 
+
+    // Click on the add icon
+    const addButton = page.locator("//div[contains(@class,'col-2 d-flex')]").first();
+    if (await addButton.isVisible()) {
+      await addButton.click();
+
+      // Confirm with Yes
+      const yesButton = page.locator("(//span[@class='alert-button-inner sc-ion-alert-md'])[2]");
+      await yesButton.waitFor({ state: 'visible', timeout: 5000 });
+      await yesButton.click();
+
+      await page.waitForTimeout(800); // Optional pause
+    } else {
+      console.warn(`Add button not found for dish: ${dish}`);
+    }
+  }
+}
+static async searchAndAddDishesByMenuCategory(
+    page: Page,
+    categoryDishMap: Record<string, string[]>
+  ) {
+    for (const [category, dishes] of Object.entries(categoryDishMap)) {
+      try {
+        // Click the category button
+        const categoryBtn = page.locator(`//button[normalize-space(text())='${category}']`);
+        await categoryBtn.waitFor({ state: 'visible', timeout: 5000 });
+        await categoryBtn.click();
+        console.log(`✅ Clicked category: ${category}`);
+
+        for (const dish of dishes) {
+          try {
+            // Fill the search input and press Enter
+            const searchInput = page.locator('input[placeholder="Search for dishes"]');
+            await searchInput.waitFor({ state: 'visible', timeout: 5000 });
+            await searchInput.fill(dish);
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000); // wait for results
+
+            // Click the first "Add" button if available
+            const addButton = page.locator("//div[contains(@class,'col-2 d-flex')]").first();
+            if (await addButton.isVisible()) {
+              await addButton.click();
+              console.log(`➕ Add clicked for dish: ${dish}`);
+
+              // Confirm with Yes
+              const yesButton = page.locator("(//span[@class='alert-button-inner sc-ion-alert-md'])[2]");
+              await yesButton.waitFor({ state: 'visible', timeout: 5000 });
+              await yesButton.click();
+              console.log(`✅ Confirmed add for: ${dish}`);
+
+              await page.waitForTimeout(800); // optional pause
+            } else {
+              console.warn(`⚠️ Add button not found for dish: ${dish} in category: ${category}`);
+            }
+          } catch (dishError) {
+            console.error(`❌ Error adding dish '${dish}' in category '${category}': ${dishError.message}`);
+          }
+        }
+      } catch (categoryError) {
+        console.error(`❌ Error with category '${category}': ${categoryError.message}`);
+      }
+    }
+  }
+
   static async searchAndPlaceForMultipleOrder(page: Page, dish: string, count: number) {
     await page.bringToFront();
     await page.reload();
@@ -174,6 +250,75 @@ export class AdminHelper {
       await page.waitForTimeout(5000);
     });
   }
+static async updateOrderStatusforDifferentDishes(page: Page, dish: string, finalAction: 'Started' | 'Dispatched') {
+  const getBtn = (status: string) =>
+    page.locator(`//div[text()[contains(., '${dish}')]]/ancestor::div[contains(@class, 'table-row')]//button[text()='${status}']`);
+  if (finalAction === 'Started') {
+    await getBtn('Started').click();
+  } else if (finalAction === 'Dispatched') {      
+    await getBtn('Dispatched').click();
+  }                                           
+}
+
+static async prepareAndDispatchOrderforDifferentDishes(page: Page, dish: string[], finalAction: 'Started' | 'Dispatched') {
+  await test.step(`Update order status for dish: ${dish} up to ${finalAction}`, async () => {
+    await AdminHelper.openOrderListView(page);
+    for (const d of dish) {
+      await AdminHelper.updateOrderStatusforDifferentDishes(page, d, finalAction);
+    }
+  });
+}
+static async  updateOrderStatusForDifferentDishes(
+  page: Page,
+  dishesByCategory: Record<string, string[]>
+) {
+  await test.step('Update order statuses for all placed dishes', async () => {
+    // Step 1: Click the "List" view button
+    const listViewButton = page.locator("//button[normalize-space(text())='List']");
+    if (await listViewButton.isVisible()) {
+      await listViewButton.click();
+      console.log("✅ Switched to 'List' view.");
+    } else {
+      console.warn("❌ 'List' view button not found or not visible.");
+    }
+
+    // Step 2: Flatten all dishes into a single array
+    const allDishes: string[] = Object.values(dishesByCategory).flat();
+
+    // Step 3: Click "Started" for all dishes
+    for (const dish of allDishes) {
+      const startedButton = page.locator(
+        `//div[contains(text(), "${dish}")]/ancestor::div[contains(@class, "table-row")]//button[contains(text(), "Started")]`
+      );
+
+      if (await startedButton.isVisible()) {
+        await startedButton.click();
+        console.log(`✅ Dish '${dish}' moved to 'Started' status.`);
+      } else {
+        console.warn(`❌ 'Started' button not found for dish: '${dish}'`);
+      }
+
+      await page.waitForTimeout(500);
+    }
+
+    // Step 4: Click "Dispatched" for all dishes
+    for (const dish of allDishes) {
+      const dispatchedButton = page.locator(
+        `//div[contains(text(), "${dish}")]/ancestor::div[contains(@class, "table-row")]//button[contains(text(), "Dispatched")]`
+      );
+
+      if (await dispatchedButton.isVisible()) {
+        await dispatchedButton.click();
+        console.log(`✅ Dish '${dish}' moved to 'Dispatched' status.`);
+      } else {
+        console.warn(`❌ 'Dispatched' button not found for dish: '${dish}'`);
+      }
+
+      await page.waitForTimeout(500);
+    }
+  });
+}
+
   static async prepareAndDispatchForMultipleOrder(page: Page, dish: string, finalAction: string) {
     await test.step(`Update order status for dish: ${dish} up to ${finalAction}`, async () => {
       await AdminHelper.openOrderListView(page);
@@ -192,7 +337,6 @@ export class AdminHelper {
     });
   }
   
-  
   static async checkOrderStatus(page: Page, dish: string, status: 'Placed' |'Started' | 'Dispatched' | 'Delivered') {
     await page.bringToFront();
     await page.reload();
@@ -201,7 +345,61 @@ export class AdminHelper {
     log(await statusBtn.isVisible() ? `Order in ${status} status.` : `Order not in ${status} status.`);
     await page.waitForTimeout(2000);
   }
+static async checkOrderStatusforDifferentDishes(
+    page: Page,
+    dishesByCategory: Record<string, string[]>,
+    status: 'Placed' | 'Started' | 'Dispatched' | 'Delivered'
+  ) {
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForTimeout(2000);
 
+    const allDishes: string[] = Object.values(dishesByCategory).flat();
+
+    for (const dish of allDishes) {
+      const statusBtn = page.locator(
+        `//span[normalize-space()='${dish}']/ancestor::div[contains(@class, 'card-body')]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(., '${status}')]`
+      );
+
+      if (await statusBtn.isVisible()) {
+        console.log(`✅ Dish '${dish}' is in '${status}' status.`);
+      } else {
+        console.warn(`❌ Dish '${dish}' is NOT in '${status}' status.`);
+      }
+
+      await page.waitForTimeout(1000); // Optional delay between checks
+    }
+
+    await page.waitForTimeout(1000); // Final delay
+  }
+static async checkOrderStatusForMultipleDishes(
+    page: Page,
+    dishesByCategory: Record<string, string[]>,
+    expectedStatus: 'Placed' | 'Started' | 'Dispatched' | 'Delivered'
+  ) {
+    await page.bringToFront();
+    await page.reload();
+    await page.waitForTimeout(2000);
+
+    const allDishes: string[] = Object.values(dishesByCategory).flat();
+
+    for (const dish of allDishes) {
+      // Updated locator based on your working pattern
+      const statusLocator = page.locator(
+        `//span[normalize-space()='${dish}']/ancestor::div[contains(@class, 'card-body')]/ancestor::div[contains(@class, 'row')]/following-sibling::div//button[contains(., '${expectedStatus}')]`
+      );
+
+      const isVisible = await statusLocator.isVisible();
+
+      if (isVisible) {
+        console.log(`✅ '${dish}' is in '${expectedStatus}' status.`);
+      } else {
+        console.warn(`❌ '${dish}' is NOT in '${expectedStatus}' status.`);
+      }
+
+      await page.waitForTimeout(1000); // Optional delay between checks
+    }
+  }
   static async moveOrderStatus(page: Page, dish: string, status: 'Return to kot' | 'Done'){
     await page.bringToFront();
     await page.waitForTimeout(3000);
@@ -242,7 +440,33 @@ export class AdminHelper {
     await page.reload();
     await page.waitForTimeout(2000);
   }
+static async moveOrderStatusforCategoryMenu(
+    page: Page,
+    dishesByCategory: Record<string, string[]>,
+    status: 'Return to kot' | 'Done'
+  ) {
+    await page.bringToFront();
+    await page.waitForTimeout(2000);
 
+    const allDishes = Object.values(dishesByCategory).flat();
+
+    for (const dish of allDishes) {
+      const statusButton = page.locator(
+        `//div[contains(text(), '${dish}')]/ancestor::div[@class='row table table-row']//button[normalize-space(text())='${status}']`
+      );
+
+      if (await statusButton.isVisible()) {
+        await statusButton.click();
+        console.log(`✅ '${dish}' moved to '${status}' status.`);
+      } else {
+        console.warn(`❌ '${dish}' is NOT in '${status}' status or button not found.`);
+      }
+
+      await page.waitForTimeout(1000); // Optional wait between clicks
+    }
+
+    await page.waitForTimeout(1000);
+  }
   static async switchToOrderListPage(page: Page) {
     await page.bringToFront();
     await page.waitForTimeout(2000);
