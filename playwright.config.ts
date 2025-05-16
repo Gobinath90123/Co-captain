@@ -1,5 +1,5 @@
 require('dotenv').config();
-//export const testDir = './tests';
+export const testDir = './tests';
 export const timeout = 60000;
 export const retries = 0;
 export const workers = process.env.CI ? 1 : 1;
