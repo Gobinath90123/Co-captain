@@ -12,7 +12,7 @@ import { launchBrowserAt, createAdminContext, createKotContext, createUserContex
   };
 
 // Test Suite
-test.describe('@RK', () => {
+test.describe('@E2E', () => {
   test('User Placing an order with different dishes', async () => {
     test.setTimeout(120_000);
     
@@ -40,10 +40,13 @@ test.describe('@RK', () => {
 
     // 7. Admin approves the submitted request
     await AdminHelper.checkAndApproveRequest(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
+    //check user is approved in admin flow  -- need to write script
+
     await AdminHelper.checkUserApproved(adminPage, testData.APPROVE_LIST_URL, subscriptionValue);
 
     // 8. User places an order
-    await AdminHelper.searchAndAddDishesByMenuCategory(userPage, dishesByCategory);
+    await AdminHelper.searchAndAddDishesByMenuCategory(userPage, dishesByCategory);  
+  
   await AdminHelper.checkOrderStatusForMultipleDishes(userPage,  dishesByCategory, 'Placed');
 
     // 9. KOT logs in to manage orders
